@@ -3,5 +3,7 @@ export const config = {
   cesiumIonToken: import.meta.env.VITE_CESIUM_ION_TOKEN ?? '',
   firmsMapKey: import.meta.env.VITE_FIRMS_MAP_KEY ?? '',
   // OpenSky / ADS-B keys removed: nothing in the client used them, and quota
-  // credentials must not ship to browsers. Flights come via /api/planes.
+  // credentials must not ship to browsers. Civil flights come via /api/opensky
+  // (open, no account); /api/planes now serves only the military layer, which
+  // airplanes.live gates behind manual approval.
 } as const;
