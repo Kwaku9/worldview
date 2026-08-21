@@ -13,11 +13,40 @@ export interface MilitaryAircraft {
   flag: string;
 }
 
+/**
+ * Military aircraft, from airplanes.live's /v2/mil feed.
+ *
+ * REQUIRES APPROVAL. Since 2026-08 airplanes.live answers anonymous callers
+ * with 403 and asks you to email contact@airplanes.live describing your
+ * project. Verified from two unrelated IPs, so it is policy rather than a
+ * per-host block. There is no free substitute: OpenSky (which now backs the
+ * civil flights layer) publishes no military filter.
+ *
+ * Consequence for anyone running this from a clone: this layer stays empty
+ * until they arrange their own access. It reports that plainly instead of
+ * throwing, so one unavailable feed cannot take the rest of the globe with it.
+ */
+export class MilitaryFeedUnavailable extends Error {
+  constructor(public readonly status: number) {
+    super(
+      status === 403
+        ? 'Military feed requires approval from airplanes.live — see README'
+        : `airplanes.live API error: ${status}`
+    );
+    this.name = 'MilitaryFeedUnavailable';
+  }
+}
+
 export async function fetchMilitaryAircraft(): Promise<MilitaryAircraft[]> {
-  const response = await fetch('/api/planes/v2/mil');
+  let response: Response;
+  try {
+    response = await fetch('/api/planes/v2/mil');
+  } catch (e) {
+    throw new MilitaryFeedUnavailable(0);
+  }
 
   if (!response.ok) {
-    throw new Error(`airplanes.live API error: ${response.status}`);
+    throw new MilitaryFeedUnavailable(response.status);
   }
 
   const data = await response.json();

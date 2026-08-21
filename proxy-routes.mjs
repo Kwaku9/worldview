@@ -25,8 +25,15 @@
  */
 export const ROUTES = [
   // ── Keyless public feeds. These work with an empty .env. ────────────────
+  // OpenSky sends `access-control-allow-origin: https://opensky-network.org`,
+  // not `*`, so the browser cannot call it directly — it must come through here.
+  { path: '/api/opensky', target: 'https://opensky-network.org', rewriteTo: '/api',
+    why: 'OpenSky Network live aircraft — open, no account, rate limited' },
+  // Retained for the military layer only. As of 2026-08-21 airplanes.live
+  // answers anonymous requests with 403 ("contact us"), so this route is
+  // expected to fail until a recipient arranges their own access.
   { path: '/api/planes', target: 'https://api.airplanes.live', rewriteTo: '',
-    why: 'ADS-B aircraft positions (civil + military)' },
+    why: 'airplanes.live — APPROVAL REQUIRED as of 2026-08; military layer only' },
   { path: '/api/cctv', target: 'https://webcams.nyctmc.org', rewriteTo: '',
     why: 'NYC DOT traffic cameras' },
   { path: '/api/caltrans', target: 'https://cwwp2.dot.ca.gov', rewriteTo: '/data', strip: true,

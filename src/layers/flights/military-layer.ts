@@ -20,6 +20,8 @@ export class MilitaryLayer {
   private entities = new Map<string, Entity>();
   private pollInterval: number | null = null;
   private _visible = true;
+  // Latched so an unavailable upstream is explained once, not on every poll.
+  private warnedUnavailable = false;
 
   constructor(private viewer: Viewer) {
     const toRemove: Entity[] = [];
@@ -122,7 +124,17 @@ export class MilitaryLayer {
 
       this.viewer.scene.requestRender();
     } catch (e) {
-      console.warn("Military aircraft update failed:", e);
+      // An unavailable feed is expected for anyone without airplanes.live
+      // approval, so say why once rather than repeating a stack trace on every
+      // poll. The layer simply stays empty.
+      if ((e as Error)?.name === 'MilitaryFeedUnavailable') {
+        if (!this.warnedUnavailable) {
+          console.warn(`Military layer inactive — ${(e as Error).message}`);
+          this.warnedUnavailable = true;
+        }
+      } else {
+        console.warn("Military aircraft update failed:", e);
+      }
     }
   }
 
