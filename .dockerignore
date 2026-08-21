@@ -1,0 +1,15 @@
+# Without this, `COPY . .` ships 210 MB of node_modules into the build context
+# and then npm install overwrites them anyway — slow, and it silently bakes the
+# host's platform-specific binaries into the image.
+node_modules
+dist
+.git
+
+# Never let a real .env reach an image. Images get pushed, pulled and shared;
+# environment variables do not. .env.example is the only one that ships.
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
