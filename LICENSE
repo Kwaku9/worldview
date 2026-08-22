@@ -19,11 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-The MIT licence covers this source code. It does NOT cover the data this
-software retrieves. Every upstream has its own terms — several are free only
-for non-commercial use, and at least one requires registration and approval
-before you may query it at all. Check the terms of anything you enable; the
-links are in .env.example.
