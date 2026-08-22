@@ -139,7 +139,11 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
-      allowedHosts: ["globe.example.com"],
+      // Hostnames the dev server will answer to when reverse-proxied. One
+      // deployment's domain does not belong in a package other people run, so
+      // this is configuration: DEV_ALLOWED_HOSTS="globe.example.com,foo.test".
+      allowedHosts: (env.DEV_ALLOWED_HOSTS || "")
+        .split(",").map((h) => h.trim()).filter(Boolean),
       watch: {
         usePolling: true,
         interval: 1000,
