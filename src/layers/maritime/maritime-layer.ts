@@ -13,18 +13,12 @@ import {
 } from "cesium";
 import { VesselState, BoundingBox, fetchVessels } from "./maritime-api";
 import { SCALE } from "@/layers/scale-constants";
+import { classifyVessel, northAxis, vesselIcon, vesselPixelSize } from "@/globe/icons";
 
-function shipSvg(hexColor: string): string {
-  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-    <path d="M16 2 L12 10 L10 10 L8 24 L12 28 L16 30 L20 28 L24 24 L22 10 L20 10 Z"
-      fill="${hexColor}" stroke="#111" stroke-width="0.7"/>
-  </svg>`)}`;
-}
-
-const SHIP_SVGS: Record<string, string> = {};
-function getShipSvg(category: string, hexColor: string): string {
-  if (!SHIP_SVGS[category]) SHIP_SVGS[category] = shipSvg(hexColor);
-  return SHIP_SVGS[category];
+/** Direction to point a vessel: true heading, or course over ground when
+ *  AIS reports heading as unavailable (511). */
+function vesselCourse(v: VesselState): number {
+  return v.heading != null && v.heading >= 0 && v.heading < 360 ? v.heading : v.cog || 0;
 }
 
 const CATEGORY_COLORS: Record<string, Color> = {
@@ -59,19 +53,45 @@ export class MaritimeLayer {
     this.pollInterval = window.setInterval(() => this.update(), 30_000);
   }
 
+  /** Area to request vessels for. computeViewRectangle() returns nothing
+   *  whenever sky is in view (any oblique angle), and an undefined box asked
+   *  the relay for EVERY ship worldwide: 2,000 entities, Danish trawlers
+   *  included, for a view of Nevada. Fall back to, and cap at, a box around
+   *  the camera sized by its altitude. */
   private getViewportBbox(): BoundingBox | undefined {
+    const cam = this.viewer.camera.positionCartographic;
+    const lat = CesiumMath.toDegrees(cam.latitude);
+    const lon = CesiumMath.toDegrees(cam.longitude);
+    // ~4x altitude in reach, 1°..30° half-span (1° ≈ 111 km).
+    const half = Math.min(30, Math.max(1, (cam.height * 4) / 111_000));
+    const halfLon = half / Math.max(0.2, Math.cos(cam.latitude));
+    // The relay takes -180..180 and reads minLon > maxLon as crossing the
+    // antimeridian, so wrap rather than let the box run past ±180.
+    const wrap = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180;
+    const around: BoundingBox = {
+      minLat: Math.max(-90, lat - half),
+      maxLat: Math.min(90, lat + half),
+      minLon: halfLon >= 180 ? -180 : wrap(lon - halfLon),
+      maxLon: halfLon >= 180 ? 180 : wrap(lon + halfLon),
+    };
+    let rect;
     try {
-      const rect = this.viewer.camera.computeViewRectangle();
-      if (!rect) return undefined;
-      return {
-        minLat: CesiumMath.toDegrees(rect.south),
-        maxLat: CesiumMath.toDegrees(rect.north),
-        minLon: CesiumMath.toDegrees(rect.west),
-        maxLon: CesiumMath.toDegrees(rect.east),
-      };
+      rect = this.viewer.camera.computeViewRectangle();
     } catch {
-      return undefined;
+      rect = undefined;
     }
+    if (!rect) return around;
+    const view: BoundingBox = {
+      minLat: CesiumMath.toDegrees(rect.south),
+      maxLat: CesiumMath.toDegrees(rect.north),
+      minLon: CesiumMath.toDegrees(rect.west),
+      maxLon: CesiumMath.toDegrees(rect.east),
+    };
+    const spanLon = (view.maxLon - view.minLon + 360) % 360;
+    // A view rectangle wider than the camera box (oblique horizon) is capped.
+    return view.maxLat - view.minLat > 2 * half || spanLon > 2 * halfLon
+      ? around
+      : view;
   }
 
   private async update(): Promise<void> {
@@ -87,14 +107,14 @@ export class MaritimeLayer {
         const speedLabel = v.sog > 0.5 ? ` ${v.sog.toFixed(1)}kn` : "";
 
         const existing = this.entities.get(v.mmsi);
+        const position = Cartesian3.fromDegrees(v.lon, v.lat, 0);
         if (existing) {
-          (existing.position as any).setValue(
-            Cartesian3.fromDegrees(v.lon, v.lat, 0)
-          );
+          (existing.position as any).setValue(position);
           if (existing.billboard) {
             (existing.billboard.rotation as any).setValue(
-              CesiumMath.toRadians(-(v.heading || 0))
+              CesiumMath.toRadians(-vesselCourse(v))
             );
+            (existing.billboard.alignedAxis as any).setValue(northAxis(position));
           }
           if (existing.label) {
             (existing.label.text as any).setValue(label + speedLabel);
@@ -108,13 +128,14 @@ export class MaritimeLayer {
         } else {
           const entity = this.viewer.entities.add({
             name: label,
-            position: Cartesian3.fromDegrees(v.lon, v.lat, 0),
+            position,
             billboard: {
-              image: getShipSvg(v.category, v.color),
-              width: 18,
-              height: 18,
-              rotation: CesiumMath.toRadians(-(v.heading || 0)),
-              alignedAxis: Cartesian3.UNIT_Z,
+              image: vesselIcon(classifyVessel(v.shipType, v.category)),
+              color: Color.fromCssColorString(v.color),
+              width: vesselPixelSize(v.length),
+              height: vesselPixelSize(v.length),
+              rotation: CesiumMath.toRadians(-vesselCourse(v)),
+              alignedAxis: northAxis(position),
               verticalOrigin: VerticalOrigin.CENTER,
               horizontalOrigin: HorizontalOrigin.CENTER,
               scaleByDistance: SCALE.maritime.point,

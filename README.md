@@ -28,9 +28,8 @@ With an empty configuration you get, verified on a clean build:
 | Satellites | 420 | CelesTrak orbital elements |
 | Borders | 333 | bundled |
 | Earthquakes | 102 | USGS |
-| Aircraft | live | OpenSky Network |
+| Aircraft | live | adsb.lol (OpenSky fallback) |
 | Weather radar | global | RainViewer |
-| Lunar trajectory | 1,284 points | JPL Horizons |
 
 Plus the globe itself, using imagery bundled with Cesium.
 
@@ -54,9 +53,6 @@ never reaches the browser.
 Three things cannot be fixed by adding a key, and the app tells you so rather
 than failing silently:
 
-- **Military aircraft.** airplanes.live began requiring prior approval by email
-  in August 2026 and answers everyone else with 403. OpenSky, which supplies the
-  civil aircraft, publishes no military filter, so there is no substitute.
 - **Conflict events (ACLED).** ACLED issues no API key — access is a login
   session — so this layer needs a small service that can hold one. One is
   included in `acled-proxy-worker/`; you supply the account.

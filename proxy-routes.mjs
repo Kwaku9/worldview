@@ -29,11 +29,10 @@ export const ROUTES = [
   // not `*`, so the browser cannot call it directly — it must come through here.
   { path: '/api/opensky', target: 'https://opensky-network.org', rewriteTo: '/api',
     why: 'OpenSky Network live aircraft — open, no account, rate limited' },
-  // Retained for the military layer only. As of 2026-08-21 airplanes.live
-  // answers anonymous requests with 403 ("contact us"), so this route is
-  // expected to fail until a recipient arranges their own access.
-  { path: '/api/planes', target: 'https://api.airplanes.live', rewriteTo: '',
-    why: 'airplanes.live — APPROVAL REQUIRED as of 2026-08; military layer only' },
+  // adsb.lol replaced airplanes.live (approval-only since 2026-08): the same
+  // readsb v2 JSON, open, with aircraft type codes. Backs civil and military.
+  { path: '/api/adsblol', target: 'https://api.adsb.lol', rewriteTo: '',
+    why: 'adsb.lol live aircraft with types, open (ODbL), no account' },
   { path: '/api/cctv', target: 'https://webcams.nyctmc.org', rewriteTo: '',
     why: 'NYC DOT traffic cameras' },
   { path: '/api/caltrans', target: 'https://cwwp2.dot.ca.gov', rewriteTo: '/data', strip: true,
@@ -50,8 +49,6 @@ export const ROUTES = [
     why: 'Georgia 511 cameras' },
   { path: '/api/overpass', target: 'https://overpass-api.de', rewriteTo: '',
     why: 'OpenStreetMap Overpass — road geometry for the traffic layer' },
-  { path: '/api/horizons', target: 'https://ssd.jpl.nasa.gov', rewriteTo: '/api/horizons.api', strip: true,
-    why: 'JPL Horizons ephemerides — solar-system bodies' },
   { path: '/api/osint/ipinfo/', target: 'https://ipinfo.io', rewriteTo: '',
     why: 'IP geolocation for the OSINT panel' },
   { path: '/api/osint/greynoise/', target: 'https://api.greynoise.io', rewriteTo: '/v3/community',
@@ -68,11 +65,13 @@ export const ROUTES = [
   // ── Companion services. Not public APIs — see README "Optional services". ──
   // Hostnames are env-overridable so this repo is not welded to one deployment's
   // service names. Defaults match the compose file shipped here.
+  // `env` names the variable that overrides `target`; vite.config resolves it
+  // after loading .env (process.env alone misses values that live only there).
   { path: '/api/ais/', target: process.env.AIS_RELAY_URL || 'http://ais-relay:9100',
-    rewriteTo: '', internal: true,
+    env: 'AIS_RELAY_URL', rewriteTo: '', internal: true,
     why: 'Maritime AIS relay — one upstream socket fanned out to all viewers' },
   { path: '/api/threats/', target: process.env.THREATS_URL || 'http://metrics:8428',
-    rewriteTo: '/api/v1', internal: true,
+    env: 'THREATS_URL', rewriteTo: '/api/v1', internal: true,
     why: 'Threat telemetry from a Prometheus-compatible store' },
 ];
 

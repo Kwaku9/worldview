@@ -159,7 +159,8 @@ export default defineConfig(({ mode }) => {
           return [
             r.path,
             {
-              target: r.target,
+              // Companion hostnames differ per deployment; .env wins.
+              target: (r.env && env[r.env]) || r.target,
               changeOrigin: true,
               // An empty result would be an invalid request line, so a bare
               // prefix maps to "/" — matching the nginx rule for the same route.

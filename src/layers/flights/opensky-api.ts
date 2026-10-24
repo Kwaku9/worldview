@@ -11,6 +11,9 @@ export interface FlightState {
   aircraftType: string;
   description: string;
   operator: string;
+  /** Emitter category: OpenSky integer (extended states, index 17) or ADS-B
+   *  string ("A3") from adsb.lol; null when unknown. */
+  category: number | string | null;
 }
 
 // Max flights to render at once to keep the globe responsive
@@ -69,6 +72,8 @@ export async function fetchFlightStates(
   const qs = new URLSearchParams({
     lamin: b.lamin.toFixed(4), lomin: b.lomin.toFixed(4),
     lamax: b.lamax.toFixed(4), lomax: b.lomax.toFixed(4),
+    // Adds the emitter category (index 17), which picks the aircraft icon.
+    extended: "1",
   });
 
   let response: Response;
@@ -115,5 +120,6 @@ export async function fetchFlightStates(
       aircraftType: '',
       description: s[2] || '',
       operator: '',
+      category: typeof s[17] === 'number' ? s[17] : null,
     }));
 }
